@@ -23,18 +23,23 @@ For each matching line:
 
 Process tasks one at a time — do not blast them in parallel.
 
-## Step 3: Echo completions
+## Step 3: Reconcile completions (both directions)
 
-- Grep `.md` files for the pattern `- \[ \] .*#todo.*\[rtm_task_id::` to find synced-but-unchecked lines.
-- For each matching line, extract the task\_id and query RTM for the task's completion status.
-  - If the task is complete in RTM, change `- [ ]` to `- [x]` in Obsidian. Preserve everything else on the line.
-  - If the task\_id is not found in RTM (deleted or missing), flag it in the report but do not modify the Obsidian line.
+- Grep `.md` files for `\[rtm_task_id::` to find all synced lines (both `- [ ]` and `- [x]`).
+- For each matching line, parse the Obsidian checkbox state, extract the task\_id, and query RTM for the task's completion status. Then:
+  - RTM complete, Obsidian unchecked → change `- [ ]` to `- [x]` in Obsidian. Preserve everything else on the line.
+  - RTM incomplete, Obsidian checked → call `rtm_complete_task` to mark it complete in RTM.
+  - Both already agree → no-op.
+  - task\_id not found in RTM (deleted or missing) → flag in the report; do not modify the Obsidian line.
+
+Completion wins over reopening: if Obsidian is checked but RTM was reopened, we re-complete RTM rather than unchecking Obsidian.
 
 ## Step 4: Report
 
 Summarize:
 
-- Tasks pushed to RTM: count and brief list of descriptions.
-- Tasks checked off from RTM completions: count and brief list.
+- Tasks pushed to RTM (new): count and brief list of descriptions.
+- Tasks completed in RTM from Obsidian check-offs: count and brief list.
+- Tasks checked off in Obsidian from RTM completions: count and brief list.
 - Errors or skipped items (e.g., task\_id not found in RTM).
 - Note if this was the first sync (i.e., the list was newly created).
