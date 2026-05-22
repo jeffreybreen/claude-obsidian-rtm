@@ -2,7 +2,9 @@ Sync #todo tasks between this Obsidian vault and Remember The Milk.
 
 ## Step 1: Determine the RTM list
 
-The RTM list name is the current working directory name (the vault name). Use the RTM MCP tools to check whether this list exists. If it does not, create it and remember that this run is a first sync (for the Step 4 report).
+The RTM list name is the vault name, which is the final path segment of the working directory shown in your environment context (e.g., for `/path/to/obsidian/MyVault`, the list name is `MyVault`). Do not shell out to compute this — just read the path you already have.
+
+Use the RTM MCP tools to check whether this list exists. If it does not, create it and remember that this run is a first sync (for the Step 4 report).
 
 ## Step 2: Push unsynced tasks
 
