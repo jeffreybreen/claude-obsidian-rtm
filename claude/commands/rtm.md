@@ -16,14 +16,29 @@ Finding unsynced tasks is a grep plus a filter (ripgrep does not support lookahe
 For each matching line:
 
 1. Extract the task description: the human-readable text on the line, stripping tags (`#todo`, etc.) and inline fields (`[key::value]`).
-2. Extract due date if present. Recognize Tasks plugin formats: `📅 YYYY-MM-DD` or `due:: YYYY-MM-DD`.
-3. Extract priority if present. Map Tasks plugin emoji to RTM priority: `⏫` = priority 1, `🔼` = priority 2, `🔽` = priority 3.
-4. Note the source file path.
-5. Create the task in RTM via MCP tools, in the vault-named list, passing the extracted due date and priority if present.
-6. Add an RTM task note containing the source file path so tasks can be traced back.
-7. Append `[rtm_task_id::XXXXX]` to the end of the Obsidian line, using the task\_id returned by RTM.
+2. Clean up the title that becomes the RTM task name. (This never touches the Obsidian line — see Step 2 scope below.)
+   - **Deterministic strip (always):** resolve wikilinks to their display text (`[[Foo|Bar]]` → `Bar`, `[[Foo]]` → `Foo`) and trim whitespace. Keep this result — it is the "original" recorded in the task note (step 7).
+   - **Semantic strip + summarize (only when the cleaned text reads awkwardly as a todo title — e.g. longer than ~60 chars, or a colon/em-dash introduces a sub-clause).** Use judgment, not regex:
+     - Strip entity prefixes that label *the user* or *the user's entities* the task is for (e.g. `John Doe:`, `JD:`, `[JD]`, `Doe Enterprises —`, `Trust:`, and similar). This is the user's personal RTM list, so such prefixes are noise. Recognize the pattern semantically — do **not** maintain a hardcoded list, because new entity prefixes keep appearing.
+     - Rewrite as an imperative title of ≤60 chars.
+     - **Reject the rewrite if it drops a number, ticker symbol, date, or proper noun present in the source** — fall back to the deterministic-strip-only text in that case.
+3. Extract due date if present. Recognize the Tasks plugin emoji form `📅 YYYY-MM-DD`, the inline field `due:: YYYY-MM-DD`, or a plain `due: <date>` — where `<date>` may be ISO or natural language (`tomorrow`, `next fri`), resolved relative to today. Remove the matched marker from the title. (Don't use RTM's `^date` shortcut in the vault — Obsidian reads a trailing `^` as a block reference.)
+4. Extract priority if present and map it to an RTM priority level. Recognize either RTM's own shortcuts — `!1`, `!2`, `!3` — or the Obsidian Tasks plugin emoji (`⏫` = 1, `🔼` = 2, `🔽` = 3). Remove whichever marker you matched from the title text so it doesn't show up in the RTM task name.
+5. Note the source file path.
+6. Create the task in RTM via MCP tools, in the vault-named list, using the cleaned-up title and passing the extracted due date and priority if present.
+7. Add an RTM task note so tasks can be traced back. Record both the source path and the original line, so a terse title can always be expanded:
+
+   ```
+   Source: <relative path to .md file>
+
+   Original:
+   <full line text after deterministic strip>
+   ```
+8. Append `[rtm_task_id::XXXXX]` to the end of the Obsidian line, using the task\_id returned by RTM.
 
 Process tasks one at a time — do not blast them in parallel.
+
+**Step 2 scope.** The title cleanup affects only the RTM task name and note; the Obsidian line keeps the user's wording verbatim, gaining only the appended `[rtm_task_id::XXXXX]`. Pushing is once-only: a line that already carries an `rtm_task_id` was filtered out above, so an edited vault line is never re-summarized and the RTM title is never updated.
 
 ## Step 3: Reconcile completions (both directions)
 
