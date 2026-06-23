@@ -26,13 +26,10 @@ For each matching line:
 4. Extract priority if present and map it to an RTM priority level. Recognize either RTM's own shortcuts — `!1`, `!2`, `!3` — or the Obsidian Tasks plugin emoji (`⏫` = 1, `🔼` = 2, `🔽` = 3). Remove whichever marker you matched from the title text so it doesn't show up in the RTM task name.
 5. Note the source file path.
 6. Create the task in RTM via MCP tools, in the vault-named list, using the cleaned-up title and passing the extracted due date and priority if present.
-7. Add an RTM task note so tasks can be traced back. Record both the source path and the original line, so a terse title can always be expanded:
+7. Add an RTM task note so tasks can be traced back, via `rtm_add_note`. It takes exactly two parameters, `task_id` and `content` — there is no `title`, `text`, or `note` parameter, and passing one fails with an opaque "Unknown error". Put the entire Source: / Original: block into `content` as a single multi-line string, so a terse title can always be expanded:
 
    ```
-   Source: <relative path to .md file>
-
-   Original:
-   <full line text after deterministic strip>
+   rtm_add_note(task_id="XXXXX", content="Source: <relative path to .md file>\n\nOriginal:\n<full line text after deterministic strip>")
    ```
 8. Append `[rtm_task_id::XXXXX]` to the end of the Obsidian line, using the task\_id returned by RTM.
 
