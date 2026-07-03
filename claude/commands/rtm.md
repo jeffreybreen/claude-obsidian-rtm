@@ -1,5 +1,17 @@
 Sync #todo tasks between this Obsidian vault and Remember The Milk.
 
+## Prerequisite: run from the vault root
+
+This command must run from the vault root — the directory whose final path segment becomes the RTM list name (Step 1) and whose tree is scanned for tasks. A vault root is identified by a `.obsidian/` directory directly inside it.
+
+Before anything else, confirm the working directory is a vault root:
+
+```
+test -d .obsidian && echo "vault root OK" || echo "NOT a vault root"
+```
+
+If `.obsidian/` is absent, **stop immediately and report** that the working directory is not a vault root — do not scan for tasks and do not create an RTM list. Proceeding from the wrong directory fails silently: it would scan the wrong tree and create a mis-named list.
+
 ## Step 1: Determine the RTM list
 
 The RTM list name is the vault name, which is the final path segment of the working directory shown in your environment context (e.g., for `/path/to/obsidian/MyVault`, the list name is `MyVault`). Do not shell out to compute this — just read the path you already have.
