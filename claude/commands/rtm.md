@@ -10,7 +10,11 @@ Use the RTM MCP tools to check whether this list exists. If it does not, create 
 
 Finding unsynced tasks is a grep plus a filter (ripgrep does not support lookaheads, so don't try to express "does not contain" as a single pattern):
 
-- Grep `.md` files for the pattern `- \[ \] .*#todo` to find all unchecked `#todo` lines.
+- Grep `.md` files for all unchecked `#todo` lines. Run this exact command — the pattern begins with a literal `-`, so it **must** be passed with `-e` (or ripgrep treats it as a flag and the whole invocation fails). Do not reconstruct it a different way:
+
+  ```
+  rg -n -g '*.md' -g '!.obsidian/**' -e '- \[ \] .*#todo' .
+  ```
 - From those results, discard any line that contains the literal string `[rtm_task_id::` — those are already synced.
 - Also discard any match that sits inside a fenced code block (```) or wrapped in inline backticks — these are documentation or examples (e.g. a note describing this very sync process), not live tasks. This is the same rule the wikilink hook applies. A literal reading that skips this filter will push fake example tasks into RTM.
 
@@ -40,7 +44,11 @@ Process tasks one at a time — do not blast them in parallel.
 
 ## Step 3: Reconcile completions (both directions)
 
-- Grep `.md` files for `\[rtm_task_id::` to find all synced lines (both `- [ ]` and `- [x]`).
+- Grep `.md` files for all synced lines (both `- [ ]` and `- [x]`), using the same `-e` form so the pattern is never misread as a flag:
+
+  ```
+  rg -n -g '*.md' -g '!.obsidian/**' -e '\[rtm_task_id::' .
+  ```
 - Discard any match inside a fenced code block (```) or inline backticks — same exclusion as Step 2. The note documenting this sync process carries an example `[rtm_task_id::...]`; reconciling it would query a task that does not exist.
 - Dedupe the remaining lines by task\_id: the same task\_id legitimately appears in several notes (e.g. copied across multiple daily notes). Group every line that shares a task\_id and reconcile the group as a unit — one RTM query per distinct task\_id, not one per line. If copies disagree on checkbox state, **completion wins**: treat the task as checked, complete it in RTM, and sync *all* copies in the vault to `- [x]`.
 - For each distinct task\_id, parse the Obsidian checkbox state (the group's state, after the completion-wins rule above) and query RTM for the task's completion status. Then:
