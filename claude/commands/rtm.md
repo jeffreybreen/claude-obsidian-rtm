@@ -12,6 +12,32 @@ test -d .obsidian && echo "vault root OK" || echo "NOT a vault root"
 
 If `.obsidian/` is absent, **stop immediately and report** that the working directory is not a vault root — do not scan for tasks and do not create an RTM list. Proceeding from the wrong directory fails silently: it would scan the wrong tree and create a mis-named list.
 
+## Prerequisite: the RTM MCP server must be authenticated
+
+This command needs the `rtm_*` MCP tools (`rtm_add_task`, `rtm_complete_task`, `rtm_add_note`, plus list/query). Check for them **before** the discovery/scan work below. If none are available, the Remember The Milk server has lost its OAuth token (RTM expires it periodically). Do not fabricate task IDs, invent a sync, or run a full dry-run first — go straight to re-authentication.
+
+Re-authenticate **from inside this session**. Do **not** tell the user to open a terminal or run `/mcp`: this runs headlessly (e.g. via the Claudian Obsidian plugin), so there is no REPL — and a bare `claude mcp login` in a non-TTY shell aborts before it can serve its callback (`stdin isn't a terminal`). The pattern that works is a pseudo-TTY (`script`) wrapped around a **backgrounded** login:
+
+1. Create a private temp file for the login output — do **not** reuse a fixed, shared path like `/tmp/rtm-login.log` (predictable, collides across runs, leaks the auth URL into a world-readable file). Use your session scratchpad directory if you have one; otherwise create one with `mktemp` and note the concrete path it prints — reuse that literal path in the next steps, because shell variables do **not** persist between your separate commands:
+
+   ```
+   mktemp -t rtm-login
+   ```
+
+2. Launch the login in the background under a pseudo-TTY, writing its output to that file (`<logfile>` below is the path from step 1). Use `run_in_background` — it must not block your turn, and you must **not** kill it; it holds a `localhost` callback server open while it waits:
+
+   ```
+   script -q <logfile> claude mcp login rememberthemilk --no-browser
+   ```
+
+3. Read `<logfile>` (re-read until the line appears — it takes a moment) and surface the full authorization URL to the user verbatim, as a clickable link (the `https://www.rememberthemilk.com/oauth/authorize.rtm?...` line).
+
+4. **Confirm the callback server is alive before telling the user to click.** Parse the port from the URL's `redirect_uri` (`http://localhost:PORT/callback`) and run `lsof -nP -iTCP:PORT -sTCP:LISTEN`. If nothing is listening, or the background task already exited non-zero, the pseudo-TTY approach has failed — do not send the user to a dead port; report it and fall back to asking them to run `claude mcp login rememberthemilk` in a real terminal (Terminal.app).
+
+5. With the listener confirmed, tell the user to click the URL and approve in RTM. The browser redirect lands on the `localhost:PORT/callback` the process is waiting on and auth completes automatically — no paste-back. Do not touch the process; let it exit on its own.
+
+6. Once it exits (`Authenticated with "rememberthemilk"`), the token is stored user-scoped and persists across projects. But **the `rtm_*` tools do not hot-load into this running session** — MCP tools bind at session startup. So tell the user to start a fresh session and re-run `/rtm`; no re-auth is needed. Nothing was written to the vault or RTM this run, so it is a clean re-run.
+
 ## Step 1: Determine the RTM list
 
 The RTM list name is the vault name, which is the final path segment of the working directory shown in your environment context (e.g., for `/path/to/obsidian/MyVault`, the list name is `MyVault`). Do not shell out to compute this — just read the path you already have.
