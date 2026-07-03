@@ -16,7 +16,7 @@ Finding unsynced tasks is a grep plus a filter (ripgrep does not support lookahe
   rg -n -g '*.md' -g '!.obsidian/**' -e '- \[ \] .*#todo' .
   ```
 - From those results, discard any line that contains the literal string `[rtm_task_id::` — those are already synced.
-- Also discard any match that sits inside a fenced code block (```) or wrapped in inline backticks — these are documentation or examples (e.g. a note describing this very sync process), not live tasks. This is the same rule the wikilink hook applies. A literal reading that skips this filter will push fake example tasks into RTM.
+- Also discard any match that sits inside a fenced code block (```) or wrapped in inline backticks — these are documentation or examples (e.g. a note describing this very sync process), not live tasks. A literal reading that skips this filter will push fake example tasks into RTM.
 
 For each matching line:
 
